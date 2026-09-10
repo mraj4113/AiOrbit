@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('AI Companies Directory')}"></head>
+<body class="bg-[#0a0a0a] font-sans text-white antialiased">
+
+<div th:replace="~{fragments/layout :: nav}"></div>
+
+<!-- HERO -->
+<section class="mx-auto max-w-6xl px-5 pt-14 pb-10">
+    <p class="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#a3a3a3]">The Directory</p>
+    <h1 class="text-4xl font-extrabold tracking-tight md:text-5xl">Explore AI Companies</h1>
+    <p class="mt-3 max-w-xl text-[15px] leading-relaxed text-[#a3a3a3]">
+        A curated, constantly updated index of the companies shaping artificial intelligence.
+    </p>
+    <p class="mt-6 text-sm text-[#a3a3a3]">
+        <span id="result-count" class="font-semibold text-white" th:text="${result.totalElements}">10</span> companies
+    </p>
+</section>
+
+<!-- CONTROLS -->
+<section class="sticky top-16 z-40 border-y border-white/[0.06] bg-black/70 backdrop-blur-xl">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-5 py-4">
+
+        <!-- Search + suggestions -->
+        <div class="relative min-w-[240px] flex-1">
+            <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                    <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a3a3a3]"
+                         fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    <input id="search-input" type="text" autocomplete="off"
+                           th:value="${search}" placeholder="Search companies..."
+                           class="w-full rounded-full border border-[#262626] bg-white/[0.03] py-2.5 pl-10 pr-4 text-sm
+                                  text-white placeholder-[#a3a3a3] outline-none transition-colors
+                                  focus:border-white/25 focus:bg-white/[0.05]"/>
+                </div>
+                <button id="search-btn" type="button" aria-label="Search"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-black
+                               transition-opacity hover:opacity-80">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="suggestions"
+                 class="absolute left-0 right-0 top-full z-50 mt-2 hidden overflow-hidden rounded-xl border border-[#262626] bg-[#171717] shadow-2xl shadow-black/60">
+            </div>
+        </div>
+
+        <!-- Sort -->
+        <select id="sort-select"
+                class="cursor-pointer rounded-full border border-[#262626] bg-white/[0.03] px-4 py-2.5 text-sm
+                       text-neutral-300 outline-none transition-colors hover:border-white/25 focus:border-white/25">
+            <option value="rating" th:selected="${sort == 'rating'}">Top Rated</option>
+            <option value="name" th:selected="${sort == 'name'}">Name A–Z</option>
+            <option value="founded" th:selected="${sort == 'founded'}">Newest Founded</option>
+            <option value="newest" th:selected="${sort == 'newest'}">Recently Added</option>
+        </select>
+
+        <!-- View toggle -->
+        <div class="flex items-center gap-1 rounded-full border border-[#262626] bg-white/[0.03] p-1">
+            <button type="button" class="view-btn flex h-8 w-8 items-center justify-center rounded-full transition-all"
+                    data-view="grid" aria-label="Grid view">
+                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                </svg>
+            </button>
+            <button type="button" class="view-btn flex h-8 w-8 items-center justify-center rounded-full transition-all"
+                    data-view="list" aria-label="List view">
+                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="2.5" rx="1"/><rect x="3" y="10.75" width="18" height="2.5" rx="1"/>
+                    <rect x="3" y="17.5" width="18" height="2.5" rx="1"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- CATEGORY CHIPS (buttons, wired by JS) -->
+    <div class="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-5 pb-4 [&::-webkit-scrollbar]:hidden">
+        <button type="button" data-category=""
+                class="chip whitespace-nowrap rounded-full border border-[#262626] bg-white/[0.03] px-4 py-1.5 text-[13px]
+                       font-medium text-neutral-300 transition-all hover:border-white/30">All</button>
+        <button th:each="cat : ${categories}" type="button" th:attr="data-category=${cat.name}"
+                class="chip whitespace-nowrap rounded-full border border-[#262626] bg-white/[0.03] px-4 py-1.5 text-[13px]
+                       font-medium text-neutral-300 transition-all hover:border-white/30">
+            <span th:text="${cat.name}">Category</span>
+            <span class="ml-1.5 text-[11px] opacity-60" th:text="${cat.count}">3</span>
+        </button>
+    </div>
+</section>
+
+<!-- GRID -->
+<section class="mx-auto max-w-6xl px-5 pt-10">
+    <div id="cards" class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+
+        <a th:each="c : ${result.items}" th:href__="@{'/companies/' + ${c.slug}}"
+           class="card-glow group block rounded-2xl bg-gradient-to-br from-white/[0.14] via-white/[0.05] to-transparent p-[1px]
+                  transition-transform duration-300 hover:-translate-y-1">
+            <div class="h-full rounded-2xl bg-[#171717] p-6">
+                <div class="flex items-start justify-between">
+                    <img th:src="${c.logoUrl}" th:alt="${c.name}" width="48" height="48"
+                         class="h-12 w-12 rounded-xl border border-[#262626] bg-white/[0.04] p-1.5 object-contain"
+                         onerror="this.style.visibility='hidden'"/>
+                    <span th:if="${c.featured}"
+                          class="rounded-full border border-[#262626] bg-white/[0.06] px-2.5 py-1 text-[10px]
+                                 font-bold uppercase tracking-wider text-white">Featured</span>
+                </div>
+                <h3 class="mt-4 flex items-center gap-1.5 text-lg font-bold tracking-tight">
+                    <span th:text="${c.name}">Name</span>
+                    <svg th:if="${c.verified}" class="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                </h3>
+                <p class="mt-1 text-[13px] text-[#a3a3a3]" th:text="${c.category}">Category</p>
+                <div class="mt-5 flex items-center justify-between border-t border-[#262626] pt-4">
+                    <div class="flex items-center gap-1.5">
+                        <svg class="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>
+                        </svg>
+                        <span class="text-sm font-bold" th:text="${#numbers.formatDecimal(c.rating,1,1)}">4.8</span>
+                        <span class="text-xs text-[#a3a3a3]" th:text="(${c.reviewCount} + ' reviews')">1240 reviews</span>
+                    </div>
+                    <svg class="h-4 w-4 text-neutral-600 transition-all duration-300 group-hover:translate-x-1 group-hover:text-white"
+                         fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M5 12h14m-6-6 6 6-6 6"/>
+                    </svg>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div id="empty-state" th:style="${#lists.isEmpty(result.items)} ? '' : 'display:none'"
+         class="flex flex-col items-center py-24 text-center">
+        <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#262626] bg-white/[0.03]">
+            <svg class="h-6 w-6 text-[#a3a3a3]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+        </div>
+        <h3 class="mt-5 text-lg font-bold">No companies found</h3>
+        <p class="mt-1.5 text-sm text-[#a3a3a3]">Try a different search term or category.</p>
+        <button type="button" id="clear-filters"
+                class="mt-6 rounded-full bg-white px-5 py-2.5 text-[13px] font-semibold text-black transition-opacity hover:opacity-80">
+            Clear all filters
+        </button>
+    </div>
+
+    <!-- PAGINATION (JS re-renders inside) -->
+    <div id="pagination" class="mt-12 flex items-center justify-center gap-2"></div>
+</section>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+<script src="/js/companies.js"></script>
+</body>
+</html>
