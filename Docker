@@ -1,7 +1,14 @@
 # --- Build Stage ---
 FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
-COPY . .
+
+# Copy the pom.xml from inside the companies directory first
+COPY companies/pom.xml .
+
+# Copy the entire source directory from inside the companies folder
+COPY companies/src ./src
+
+# Compile and package your application safely
 RUN mvn clean package -DskipTests
 
 # --- Run Stage ---
